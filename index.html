@@ -3,52 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poze Botez Denis Filip</title>
+    <title>Botez Denis Filip - Galerie</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f8f9fa; }
-        .container { max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        h1 { color: #333; font-size: 24px; }
-        input[type="file"] { margin: 20px 0; }
-        button { background-color: #007bff; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; }
-        button:disabled { background-color: #ccc; }
-        progress { width: 100%; height: 20px; margin-top: 15px; display: none; }
-        #status { margin-top: 15px; font-weight: bold; color: green; }
+        body { font-family: 'Segoe UI', sans-serif; text-align: center; padding: 10px; background-color: #f0f2f5; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { font-size: 22px; color: #1a73e8; margin-bottom: 5px; }
+        .upload-section { border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
+        input[type="file"] { margin: 15px 0; width: 100%; }
+        #uploadBtn { background-color: #1a73e8; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; }
+        #uploadBtn:disabled { background-color: #ccc; }
+        
+        /* Galerie */
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 20px; }
+        .gallery-item { position: relative; border-radius: 8px; overflow: hidden; background: #eee; aspect-ratio: 1 / 1; border: 1px solid #ddd; }
+        .gallery-item img, .gallery-item video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .download-btn { position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: bold; }
+        
+        progress { width: 100%; height: 12px; margin-top: 10px; display: none; }
+        #status { margin-top: 10px; font-size: 14px; font-weight: bold; color: #28a745; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Încarcă amintirile cu Denis Filip 📸</h1>
-    <p>Selectează pozele sau clipurile video de la botez:</p>
+    <h1>Amintiri Botez Denis Filip 👣</h1>
     
-    <!-- Permitem selecția multiplă de imagini și video -->
-    <input type="file" id="fileInput" multiple accept="image/*,video/*">
-    <br>
-    <button id="uploadBtn">Încarcă Fișierele</button>
-    
-    <progress id="progressBar" value="0" max="100"></progress>
-    <div id="status"></div>
+    <div class="upload-section">
+        <p>Trimite și tu pozele sau clipurile tale:</p>
+        <input type="file" id="fileInput" multiple accept="image/*,video/*">
+        <button id="uploadBtn">Încarcă în Galerie</button>
+        <progress id="progressBar" value="0" max="100"></progress>
+        <div id="status"></div>
+    </div>
+
+    <h2>Galerie Foto & Video</h2>
+    <div class="gallery" id="gallery">
+        <p>Se încarcă pozele...</p>
+    </div>
 </div>
 
-<!-- Folosim SDK-ul Firebase modular prin CDN -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getStorage, ref, uploadBytesResumable } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
+    import { getStorage, ref, uploadBytesResumable, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
 
-    // INSEREAZĂ AICI DATELE TALE DIN FIREBASE CONSOLE (Pasul 1)
+    // Datele tale oficiale
     const firebaseConfig = {
       apiKey: "AIzaSyBLZeak1UFDcfj8BcYKoOJUAjmM4b4EJ7o",
       authDomain: "botez-denis-filip.firebaseapp.com",
       projectId: "botez-denis-filip",
       storageBucket: "botez-denis-filip.firebasestorage.app",
       messagingSenderId: "748700570580",
-      appId: "1:748700570580:web:eb33cf60eb7ef9f99cbc41"
+      appId: "1:748700570580:web:eb33cf60eb7ef9f99cbc41",
       measurementId: "G-XFCZLZG8BC"
     };
 
     const app = initializeApp(firebaseConfig);
     const storage = getStorage(app);
+    const galleryDiv = document.getElementById('gallery');
 
+    // Afișare galerie
+    async function loadGallery() {
+        const listRef = ref(storage, 'botez_media/');
+        try {
+            const res = await listAll(listRef);
+            if (res.items.length === 0) {
+                galleryDiv.innerHTML = "<p>Nicio poză momentan.</p>";
+                return;
+            }
+            galleryDiv.innerHTML = "";
+            for (const itemRef of res.items) {
+                const url = await getDownloadURL(itemRef);
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'gallery-item';
+                
+                const isVideo = itemRef.name.toLowerCase().match(/\.(mp4|mov|webm)$/);
+                if (isVideo) {
+                    itemDiv.innerHTML = `<video src="${url}" muted></video>`;
+                } else {
+                    itemDiv.innerHTML = `<img src="${url}" loading="lazy">`;
+                }
+
+                const dLink = document.createElement('a');
+                dLink.href = url;
+                dLink.target = "_blank";
+                dLink.className = "download-btn";
+                dLink.innerText = "Salvare";
+                itemDiv.appendChild(dLink);
+                galleryDiv.appendChild(itemDiv);
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    loadGallery();
+
+    // Upload
     const fileInput = document.getElementById('fileInput');
     const uploadBtn = document.getElementById('uploadBtn');
     const progressBar = document.getElementById('progressBar');
@@ -56,49 +104,31 @@
 
     uploadBtn.addEventListener('click', async () => {
         const files = fileInput.files;
-        if (files.length === 0) {
-            alert("Te rog selectează cel puțin un fișier!");
-            return;
-        }
+        if (files.length === 0) return alert("Selectează fișiere!");
 
         uploadBtn.disabled = true;
         progressBar.style.display = 'block';
-        statusDiv.innerText = `Se încarcă 0 din ${files.length} fișiere...`;
-
-        let uploadedCount = 0;
+        statusDiv.innerText = "Se încarcă...";
 
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            // Generăm un nume unic pentru a nu suprascrie fișierele cu același nume (ex: image.jpg)
-            const uniqueFileName = `${Date.now()}_${file.name}`;
-            const storageRef = ref(storage, `botez_media/${uniqueFileName}`);
-            
+            const storageRef = ref(storage, `botez_media/${Date.now()}_${file.name}`);
             const uploadTask = uploadBytesResumable(storageRef, file);
 
-            // Așteptăm ca fiecare fișier să se încarce
-            await new Promise((resolve, reject) => {
+            await new Promise((resolve) => {
                 uploadTask.on('state_changed', 
-                    (snapshot) => {
-                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                        progressBar.value = progress;
-                    }, 
-                    (error) => {
-                        console.error("Eroare la încărcare:", error);
-                        reject(error);
-                    }, 
-                    () => {
-                        uploadedCount++;
-                        statusDiv.innerText = `S-au încărcat ${uploadedCount} din ${files.length} fișiere.`;
-                        resolve();
-                    }
+                    (snap) => { progressBar.value = (snap.bytesTransferred / snap.totalBytes) * 100; },
+                    () => resolve(),
+                    () => resolve()
                 );
             });
         }
 
-        statusDiv.innerText = "Toate fișierele au fost încărcate cu succes! 🎉";
+        statusDiv.innerText = "Încărcare reușită! 🎉";
         progressBar.style.display = 'none';
         uploadBtn.disabled = false;
-        fileInput.value = ""; // Resetăm input-ul
+        fileInput.value = "";
+        loadGallery();
     });
 </script>
 
