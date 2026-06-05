@@ -27,7 +27,6 @@
         h1 { font-size: 28px; color: #0284c7; margin-bottom: 5px; font-weight: 800; }
         .subtitle { color: #64748b; font-size: 16px; margin-top: 0; margin-bottom: 15px; }
         
-        /* Caseta cu informații despre memorie */
         .storage-info {
             background: #f0f9ff;
             border: 1px solid #bae6fd;
@@ -82,11 +81,13 @@
         .gallery-item:hover { transform: scale(1.03); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
         .gallery-item img, .gallery-item video { width: 100%; height: 100%; object-fit: cover; display: block; }
         
+        /* Butonul de descărcare actualizat */
         .download-btn { 
             position: absolute; bottom: 8px; right: 8px; 
             background: rgba(255, 255, 255, 0.9); color: #0284c7; 
             padding: 6px 12px; border-radius: 20px; text-decoration: none; 
-            font-size: 12px; font-weight: bold; 
+            font-size: 12px; font-weight: bold; border: none; cursor: pointer;
+            font-family: 'Nunito', sans-serif;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: all 0.2s ease;
             backdrop-filter: blur(4px);
         }
@@ -106,7 +107,6 @@
     <h1>Amintiri Botez Denis Filip 👼</h1>
     <p class="subtitle">Adaugă și tu pozele tale în albumul nostru digital!</p>
 
-    <!-- Caseta unde va apărea memoria calculată -->
     <div id="storageInfo" class="storage-info">
         ⏳ Se calculează memoria disponibilă...
     </div>
@@ -127,7 +127,6 @@
 </div>
 
 <script type="module">
-    // Am importat și funcția getMetadata necesară pentru a afla dimensiunea
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getStorage, ref, uploadBytesResumable, listAll, getDownloadURL, getMetadata } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
 
@@ -146,41 +145,32 @@
     const galleryDiv = document.getElementById('gallery');
     const storageInfoDiv = document.getElementById('storageInfo');
 
-    // Funcție pentru a calcula dimensiunea tuturor fișierelor
     async function updateStorageUsage(items) {
         if (items.length === 0) {
             storageInfoDiv.innerHTML = "💾 Spațiu ocupat: <span>0 MB</span> din <span>5 GB</span> (0%) <br> 📸 Fișiere încărcate: <span>0</span>";
             return;
         }
-
         try {
             let totalBytesUsed = 0;
-            // Luăm detaliile pentru fiecare fișier în parte
             const metadataPromises = items.map(item => getMetadata(item));
             const metadatas = await Promise.all(metadataPromises);
             
-            metadatas.forEach(meta => {
-                totalBytesUsed += meta.size;
-            });
+            metadatas.forEach(meta => { totalBytesUsed += meta.size; });
 
-            // Transformăm în MB și calculăm procentul (5GB = 5120MB)
             const usedMB = (totalBytesUsed / (1024 * 1024)).toFixed(1);
             const percentage = ((totalBytesUsed / (5 * 1024 * 1024 * 1024)) * 100).toFixed(2);
 
             storageInfoDiv.innerHTML = `💾 Spațiu ocupat: <span>${usedMB} MB</span> din <span>5 GB</span> (${percentage}%) <br> 📸 Fișiere încărcate: <span>${items.length}</span>`;
         } catch (error) {
-            console.error("Eroare la calcul memorie:", error);
-            storageInfoDiv.innerHTML = "Memorie disponibilă: 5 GB (Eroare la calculare exactă)";
+            console.error("Eroare la calcul:", error);
+            storageInfoDiv.innerHTML = "Memorie disponibilă: 5 GB";
         }
     }
 
-    // Afișare galerie
     async function loadGallery() {
         const listRef = ref(storage, 'botez_media/');
         try {
             const res = await listAll(listRef);
-            
-            // Pornim calculul memoriei în fundal
             updateStorageUsage(res.items);
 
             if (res.items.length === 0) {
@@ -200,24 +190,34 @@
                     itemDiv.innerHTML = `<img src="${url}" loading="lazy">`;
                 }
 
-                const dLink = document.createElement('a');
-                dLink.href = url;
-                dLink.target = "_blank";
-                dLink.download = itemRef.name;
-                dLink.className = "download-btn";
-                dLink.innerText = "Descarcă";
-                itemDiv.appendChild(dLink);
+                // Logica nouă pentru descărcare cu confirmare
+                const dBtn = document.createElement('button');
+                dBtn.className = "download-btn";
+                dBtn.innerText = "Descarcă";
+                dBtn.onclick = () => {
+                    const accept = confirm("Vrei să descarci această amintire?");
+                    if (accept) {
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = itemRef.name;
+                        a.target = "_blank"; // Deschide în siguranță dacă browserul blochează download-ul direct
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    }
+                };
+
+                itemDiv.appendChild(dBtn);
                 galleryDiv.appendChild(itemDiv);
             }
         } catch (e) { 
             console.error(e); 
-            galleryDiv.innerHTML = "<p class='empty-gallery'>Eroare la afișare. Asigură-te că regulile Firebase permit citirea.</p>";
+            galleryDiv.innerHTML = "<p class='empty-gallery'>Eroare la afișare.</p>";
         }
     }
 
     loadGallery();
 
-    // Logica de Încărcare
     const fileInput = document.getElementById('fileInput');
     const uploadBtn = document.getElementById('uploadBtn');
     const progressBar = document.getElementById('progressBar');
@@ -250,7 +250,6 @@
         uploadBtn.disabled = false;
         fileInput.value = "";
         
-        // După ce termină de încărcat poze noi, se reîncarcă galeria și se recalculează memoria
         storageInfoDiv.innerHTML = "⏳ Se recalculează memoria...";
         loadGallery();
     });
