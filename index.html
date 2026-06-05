@@ -4,14 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Botez Denis Filip - Galerie</title>
-    <!-- Adăugăm un font modern de la Google -->
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         body { 
             font-family: 'Nunito', sans-serif; 
             text-align: center; 
             padding: 20px 10px; 
-            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); /* Fundal baby blue */
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); 
             color: #334155; 
             min-height: 100vh;
             margin: 0;
@@ -110,7 +109,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getStorage, ref, uploadBytesResumable, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
 
-    // Datele tale oficiale cu virgula adăugată corect
+    // Datele tale oficiale cu virgula corectă
     const firebaseConfig = {
       apiKey: "AIzaSyBLZeak1UFDcfj8BcYKoOJUAjmM4b4EJ7o",
       authDomain: "botez-denis-filip.firebaseapp.com",
@@ -150,6 +149,7 @@
                 const dLink = document.createElement('a');
                 dLink.href = url;
                 dLink.target = "_blank";
+                dLink.download = itemRef.name; // Forțează descărcarea
                 dLink.className = "download-btn";
                 dLink.innerText = "Descarcă";
                 itemDiv.appendChild(dLink);
@@ -157,7 +157,7 @@
             }
         } catch (e) { 
             console.error(e); 
-            galleryDiv.innerHTML = "<p class='empty-gallery'>Eroare la încărcarea galeriei. Posibil să nu fi activat regulile în Firebase.</p>";
+            galleryDiv.innerHTML = "<p class='empty-gallery'>Eroare la afișare. Asigură-te că regulile Firebase permit citirea (allow read: if true;).</p>";
         }
     }
 
