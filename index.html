@@ -4,41 +4,105 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Botez Denis Filip - Galerie</title>
+    <!-- Adăugăm un font modern de la Google -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; text-align: center; padding: 10px; background-color: #f0f2f5; color: #333; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h1 { font-size: 22px; color: #1a73e8; margin-bottom: 5px; }
-        .upload-section { border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
-        input[type="file"] { margin: 15px 0; width: 100%; }
-        #uploadBtn { background-color: #1a73e8; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; }
-        #uploadBtn:disabled { background-color: #ccc; }
+        body { 
+            font-family: 'Nunito', sans-serif; 
+            text-align: center; 
+            padding: 20px 10px; 
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); /* Fundal baby blue */
+            color: #334155; 
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: rgba(255, 255, 255, 0.95); 
+            padding: 30px 20px; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+            backdrop-filter: blur(10px);
+        }
+        h1 { font-size: 28px; color: #0284c7; margin-bottom: 5px; font-weight: 800; }
+        .subtitle { color: #64748b; font-size: 16px; margin-top: 0; margin-bottom: 25px; }
+        
+        .upload-section { 
+            background: #f8fafc; 
+            border: 2px dashed #7dd3fc; 
+            padding: 25px 15px; 
+            border-radius: 15px; 
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+        .upload-section:hover { border-color: #0ea5e9; background: #f0f9ff; }
+        
+        input[type="file"] { margin: 10px 0 20px 0; width: 100%; max-width: 300px; }
+        input[type="file"]::file-selector-button {
+            background: #e0f2fe; border: 1px solid #bae6fd; padding: 8px 15px;
+            border-radius: 8px; color: #0284c7; font-weight: bold; cursor: pointer; transition: 0.3s;
+        }
+        input[type="file"]::file-selector-button:hover { background: #bae6fd; }
+
+        #uploadBtn { 
+            background: #0ea5e9; color: white; border: none; padding: 14px 30px; 
+            border-radius: 25px; cursor: pointer; font-weight: 800; font-size: 16px; 
+            width: 100%; max-width: 300px; font-family: 'Nunito', sans-serif;
+            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4);
+            transition: all 0.3s ease;
+        }
+        #uploadBtn:hover { background: #0284c7; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(14, 165, 233, 0.6); }
+        #uploadBtn:disabled { background: #cbd5e1; box-shadow: none; transform: none; cursor: not-allowed; }
         
         /* Galerie */
-        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 20px; }
-        .gallery-item { position: relative; border-radius: 8px; overflow: hidden; background: #eee; aspect-ratio: 1 / 1; border: 1px solid #ddd; }
+        h2 { color: #0f172a; font-weight: 800; margin-bottom: 20px; }
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+        .gallery-item { 
+            position: relative; border-radius: 12px; overflow: hidden; 
+            background: #f1f5f9; aspect-ratio: 1 / 1; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease;
+        }
+        .gallery-item:hover { transform: scale(1.03); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
         .gallery-item img, .gallery-item video { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .download-btn { position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: bold; }
         
-        progress { width: 100%; height: 12px; margin-top: 10px; display: none; }
-        #status { margin-top: 10px; font-size: 14px; font-weight: bold; color: #28a745; }
+        .download-btn { 
+            position: absolute; bottom: 8px; right: 8px; 
+            background: rgba(255, 255, 255, 0.9); color: #0284c7; 
+            padding: 6px 12px; border-radius: 20px; text-decoration: none; 
+            font-size: 12px; font-weight: bold; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: all 0.2s ease;
+            backdrop-filter: blur(4px);
+        }
+        .download-btn:hover { background: #0ea5e9; color: white; }
+        
+        progress { width: 100%; height: 10px; margin-top: 15px; border-radius: 10px; overflow: hidden; display: none; }
+        progress::-webkit-progress-bar { background-color: #e2e8f0; }
+        progress::-webkit-progress-value { background-color: #0ea5e9; }
+        
+        #status { margin-top: 15px; font-size: 15px; font-weight: bold; color: #10b981; }
+        .empty-gallery { color: #94a3b8; font-style: italic; padding: 20px; grid-column: 1 / -1; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Amintiri Botez Denis Filip 👣</h1>
+    <h1>Amintiri Botez Denis Filip 👼</h1>
+    <p class="subtitle">Adaugă și tu pozele tale în albumul nostru digital!</p>
     
     <div class="upload-section">
-        <p>Trimite și tu pozele sau clipurile tale:</p>
+        <p style="margin-top: 0; font-weight: 600;">Selectează poze sau clipuri video:</p>
         <input type="file" id="fileInput" multiple accept="image/*,video/*">
+        <br>
         <button id="uploadBtn">Încarcă în Galerie</button>
         <progress id="progressBar" value="0" max="100"></progress>
         <div id="status"></div>
     </div>
 
-    <h2>Galerie Foto & Video</h2>
+    <h2>Galerie Foto & Video 📸</h2>
     <div class="gallery" id="gallery">
-        <p>Se încarcă pozele...</p>
+        <p class="empty-gallery">Se încarcă pozele...</p>
     </div>
 </div>
 
@@ -46,7 +110,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getStorage, ref, uploadBytesResumable, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
 
-    // Datele tale oficiale
+    // Datele tale oficiale cu virgula adăugată corect
     const firebaseConfig = {
       apiKey: "AIzaSyBLZeak1UFDcfj8BcYKoOJUAjmM4b4EJ7o",
       authDomain: "botez-denis-filip.firebaseapp.com",
@@ -67,7 +131,7 @@
         try {
             const res = await listAll(listRef);
             if (res.items.length === 0) {
-                galleryDiv.innerHTML = "<p>Nicio poză momentan.</p>";
+                galleryDiv.innerHTML = "<p class='empty-gallery'>Fii primul care încarcă o amintire! 🤍</p>";
                 return;
             }
             galleryDiv.innerHTML = "";
@@ -78,7 +142,7 @@
                 
                 const isVideo = itemRef.name.toLowerCase().match(/\.(mp4|mov|webm)$/);
                 if (isVideo) {
-                    itemDiv.innerHTML = `<video src="${url}" muted></video>`;
+                    itemDiv.innerHTML = `<video src="${url}" controls></video>`;
                 } else {
                     itemDiv.innerHTML = `<img src="${url}" loading="lazy">`;
                 }
@@ -87,16 +151,19 @@
                 dLink.href = url;
                 dLink.target = "_blank";
                 dLink.className = "download-btn";
-                dLink.innerText = "Salvare";
+                dLink.innerText = "Descarcă";
                 itemDiv.appendChild(dLink);
                 galleryDiv.appendChild(itemDiv);
             }
-        } catch (e) { console.error(e); }
+        } catch (e) { 
+            console.error(e); 
+            galleryDiv.innerHTML = "<p class='empty-gallery'>Eroare la încărcarea galeriei. Posibil să nu fi activat regulile în Firebase.</p>";
+        }
     }
 
     loadGallery();
 
-    // Upload
+    // Logica de Încărcare
     const fileInput = document.getElementById('fileInput');
     const uploadBtn = document.getElementById('uploadBtn');
     const progressBar = document.getElementById('progressBar');
@@ -104,7 +171,7 @@
 
     uploadBtn.addEventListener('click', async () => {
         const files = fileInput.files;
-        if (files.length === 0) return alert("Selectează fișiere!");
+        if (files.length === 0) return alert("Selectează cel puțin un fișier!");
 
         uploadBtn.disabled = true;
         progressBar.style.display = 'block';
@@ -124,7 +191,7 @@
             });
         }
 
-        statusDiv.innerText = "Încărcare reușită! 🎉";
+        statusDiv.innerText = "Încărcare reușită! 🎉 Mulțumim!";
         progressBar.style.display = 'none';
         uploadBtn.disabled = false;
         fileInput.value = "";
