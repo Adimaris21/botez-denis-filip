@@ -76,6 +76,24 @@
         #uploadBtn:hover { background: #0284c7; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(14, 165, 233, 0.6); }
         #uploadBtn:disabled { background: #cbd5e1; box-shadow: none; transform: none; cursor: not-allowed; }
         
+        /* Secțiunea pentru bara de progres "1 din X" */
+        .progress-container { 
+            margin-top: 20px; text-align: center; background: white; 
+            padding: 15px; border-radius: 12px; border: 1px solid #e0f2fe;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03); display: none;
+        }
+        .file-name { 
+            font-size: 15px; font-weight: 800; color: #0284c7; margin-bottom: 8px; 
+        }
+        .indiv-bar { 
+            width: 100%; height: 10px; border-radius: 5px; overflow: hidden; 
+        }
+        .indiv-bar::-webkit-progress-bar { background-color: #f1f5f9; }
+        .indiv-bar::-webkit-progress-value { background-color: #0ea5e9; transition: width 0.2s ease; }
+        .file-perc { 
+            font-size: 14px; font-weight: 800; color: #10b981; margin-top: 5px; 
+        }
+
         /* Galerie */
         h2 { color: #0f172a; font-weight: 800; margin-bottom: 20px; }
         .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; }
@@ -89,7 +107,6 @@
         .gallery-item .media-container { aspect-ratio: 1 / 1; width: 100%; }
         .gallery-item img, .gallery-item video { width: 100%; height: 100%; object-fit: cover; display: block; }
         
-        /* Boxa pentru admin (ascunsă implicit) */
         .uploader-info {
             font-size: 11px; color: #b91c1c; background: #fee2e2; padding: 8px 5px;
             border-top: 1px solid #fca5a5; text-align: center; font-weight: 800;
@@ -107,11 +124,6 @@
         .download-btn:hover { background: #0ea5e9; color: white; }
         .download-btn:disabled { background: #cbd5e1; color: #64748b; cursor: wait; }
         
-        progress { width: 100%; height: 10px; margin-top: 15px; border-radius: 10px; overflow: hidden; display: none; }
-        progress::-webkit-progress-bar { background-color: #e2e8f0; }
-        progress::-webkit-progress-value { background-color: #0ea5e9; }
-        
-        #status { margin-top: 15px; font-size: 15px; font-weight: bold; color: #10b981; }
         .empty-gallery { color: #94a3b8; font-style: italic; padding: 20px; grid-column: 1 / -1; }
     </style>
 </head>
@@ -132,8 +144,13 @@
         <input type="file" id="fileInput" multiple accept="image/*,video/*">
         <br>
         <button id="uploadBtn">Încarcă în Galerie</button>
-        <progress id="progressBar" value="0" max="100"></progress>
-        <div id="status"></div>
+        
+        <!-- Bara de progres inteligentă (1 din X) -->
+        <div id="progressContainer" class="progress-container">
+            <div id="progressText" class="file-name">Pregătire...</div>
+            <progress id="mainProgressBar" class="indiv-bar" value="0" max="100"></progress>
+            <div id="progressPercentage" class="file-perc">0%</div>
+        </div>
     </div>
 
     <h2>Galerie Foto & Video 📸</h2>
@@ -207,7 +224,6 @@
                 
                 const uploader = meta.customMetadata?.uploaderName || "Anonim";
                 const device = meta.customMetadata?.deviceType || "Necunoscut";
-                // Extragem numele original salvat la încărcare
                 const originalFileName = meta.customMetadata?.originalName || itemRef.name.substring(itemRef.name.indexOf('_') + 1);
 
                 const itemDiv = document.createElement('div');
@@ -249,7 +265,7 @@
                             const a = document.createElement('a');
                             a.style.display = 'none';
                             a.href = blobUrl;
-                            a.download = originalFileName; // Forțează descărcarea cu numele original!
+                            a.download = originalFileName; 
                             document.body.appendChild(a);
                             a.click();
                             window.URL.revokeObjectURL(blobUrl);
@@ -281,8 +297,12 @@
     const fileInput = document.getElementById('fileInput');
     const uploaderNameInput = document.getElementById('uploaderName');
     const uploadBtn = document.getElementById('uploadBtn');
-    const progressBar = document.getElementById('progressBar');
-    const statusDiv = document.getElementById('status');
+    
+    // Elementele pentru bara de progres
+    const progressContainer = document.getElementById('progressContainer');
+    const progressText = document.getElementById('progressText');
+    const mainProgressBar = document.getElementById('mainProgressBar');
+    const progressPercentage = document.getElementById('progressPercentage');
 
     uploadBtn.addEventListener('click', async () => {
         const files = fileInput.files;
@@ -292,14 +312,18 @@
         const deviceType = getDeviceType();
 
         uploadBtn.disabled = true;
-        progressBar.style.display = 'block';
-        statusDiv.innerText = "Se încarcă...";
+        progressContainer.style.display = 'block'; // Arătăm panoul de progres
 
+        // Încărcăm pe rând (secvențial) fiecare fișier selectat
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
             const storageRef = ref(storage, `botez_media/${Date.now()}_${file.name}`);
             
-            // Aici adăugăm numele ORIGINAL în interiorul pozei
+            // Actualizăm textul: ex. "Se încarcă fișierul 1 / 9..."
+            progressText.innerText = `⏳ Se încarcă fișierul ${i + 1} / ${files.length}...`;
+            mainProgressBar.value = 0;
+            progressPercentage.innerText = "0%";
+
             const metadata = {
                 customMetadata: {
                     uploaderName: uploaderName,
@@ -310,22 +334,40 @@
 
             const uploadTask = uploadBytesResumable(storageRef, file, metadata);
 
+            // Așteptăm să se termine încărcarea fișierului curent înainte să trecem la următorul
             await new Promise((resolve) => {
                 uploadTask.on('state_changed', 
-                    (snap) => { progressBar.value = (snap.bytesTransferred / snap.totalBytes) * 100; },
-                    () => resolve(),
-                    () => resolve()
+                    (snap) => { 
+                        const progress = (snap.bytesTransferred / snap.totalBytes) * 100;
+                        mainProgressBar.value = progress;
+                        progressPercentage.innerText = Math.round(progress) + '%';
+                    },
+                    (error) => {
+                        console.error(error);
+                        resolve(); // Trecem peste dacă dă o mică eroare la un fișier
+                    },
+                    () => {
+                        resolve(); // Fișierul s-a încărcat cu succes
+                    }
                 );
             });
         }
 
-        statusDiv.innerText = "Încărcare reușită! 🎉 Mulțumim!";
-        progressBar.style.display = 'none';
+        // Când se termină totul (bucla se încheie)
+        progressText.innerText = `✅ Succes! ${files.length} fișiere încărcate. 🎉`;
+        mainProgressBar.value = 100;
+        progressPercentage.innerText = "100%";
+
+        // Ascundem bara după 3 secunde ca să fie curat ecranul
+        setTimeout(() => {
+            progressContainer.style.display = 'none';
+        }, 3000);
+
         uploadBtn.disabled = false;
         fileInput.value = "";
         uploaderNameInput.value = ""; 
         
-        storageInfoDiv.innerHTML = "⏳ Se recalculează...";
+        storageInfoDiv.innerHTML = "⏳ Se recalculează memoria...";
         loadGallery();
     });
 </script>
