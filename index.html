@@ -52,7 +52,14 @@
         }
         .upload-section:hover { border-color: #0ea5e9; background: #f0f9ff; }
         
-        input[type="file"] { margin: 10px 0 20px 0; width: 100%; max-width: 300px; }
+        input[type="text"] {
+            margin-bottom: 15px; padding: 10px 15px; width: 100%; max-width: 270px;
+            border-radius: 10px; border: 1px solid #bae6fd; font-family: 'Nunito', sans-serif;
+            font-size: 15px; outline: none;
+        }
+        input[type="text"]:focus { border-color: #0ea5e9; box-shadow: 0 0 5px rgba(14, 165, 233, 0.3); }
+
+        input[type="file"] { margin: 0 0 20px 0; width: 100%; max-width: 300px; }
         input[type="file"]::file-selector-button {
             background: #e0f2fe; border: 1px solid #bae6fd; padding: 8px 15px;
             border-radius: 8px; color: #0284c7; font-weight: bold; cursor: pointer; transition: 0.3s;
@@ -71,18 +78,24 @@
         
         /* Galerie */
         h2 { color: #0f172a; font-weight: 800; margin-bottom: 20px; }
-        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; }
         .gallery-item { 
             position: relative; border-radius: 12px; overflow: hidden; 
-            background: #f1f5f9; aspect-ratio: 1 / 1; 
+            background: #f1f5f9; display: flex; flex-direction: column;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             transition: transform 0.3s ease;
         }
         .gallery-item:hover { transform: scale(1.03); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
+        .gallery-item .media-container { aspect-ratio: 1 / 1; width: 100%; }
         .gallery-item img, .gallery-item video { width: 100%; height: 100%; object-fit: cover; display: block; }
         
+        .uploader-info {
+            font-size: 11px; color: #64748b; background: white; padding: 8px 5px;
+            border-top: 1px solid #e2e8f0; text-align: center; font-weight: 600;
+        }
+
         .download-btn { 
-            position: absolute; bottom: 8px; right: 8px; 
+            position: absolute; bottom: 40px; right: 8px; 
             background: rgba(255, 255, 255, 0.9); color: #0284c7; 
             padding: 6px 12px; border-radius: 20px; text-decoration: none; 
             font-size: 12px; font-weight: bold; border: none; cursor: pointer;
@@ -108,11 +121,13 @@
     <p class="subtitle">Adaugă și tu pozele tale în albumul nostru digital!</p>
 
     <div id="storageInfo" class="storage-info">
-        ⏳ Se calculează memoria disponibilă...
+        ⏳ Se calculează memoria...
     </div>
     
     <div class="upload-section">
-        <p style="margin-top: 0; font-weight: 600;">Selectează poze sau clipuri video:</p>
+        <p style="margin-top: 0; font-weight: 600;">Cine încarcă pozele?</p>
+        <input type="text" id="uploaderName" placeholder="Numele tău (opțional)">
+        <br>
         <input type="file" id="fileInput" multiple accept="image/*,video/*">
         <br>
         <button id="uploadBtn">Încarcă în Galerie</button>
@@ -145,24 +160,29 @@
     const galleryDiv = document.getElementById('gallery');
     const storageInfoDiv = document.getElementById('storageInfo');
 
+    // Funcție pentru a detecta dispozitivul
+    function getDeviceType() {
+        const ua = navigator.userAgent;
+        if (/android/i.test(ua)) return "Android";
+        if (/iPad|iPhone|iPod/.test(ua)) return "iPhone/iPad";
+        if (/windows/i.test(ua)) return "Windows PC";
+        if (/mac/i.test(ua)) return "Mac";
+        return "Dispozitiv Necunoscut";
+    }
+
     async function updateStorageUsage(items) {
         if (items.length === 0) {
-            storageInfoDiv.innerHTML = "💾 Spațiu ocupat: <span>0 MB</span> din <span>5 GB</span> (0%) <br> 📸 Fișiere încărcate: <span>0</span>";
+            storageInfoDiv.innerHTML = "💾 Spațiu ocupat: <span>0 MB</span> din <span>5 GB</span> (0%) <br> 📸 Fișiere: <span>0</span>";
             return;
         }
         try {
             let totalBytesUsed = 0;
-            const metadataPromises = items.map(item => getMetadata(item));
-            const metadatas = await Promise.all(metadataPromises);
-            
+            const metadatas = await Promise.all(items.map(item => getMetadata(item)));
             metadatas.forEach(meta => { totalBytesUsed += meta.size; });
-
             const usedMB = (totalBytesUsed / (1024 * 1024)).toFixed(1);
             const percentage = ((totalBytesUsed / (5 * 1024 * 1024 * 1024)) * 100).toFixed(2);
-
-            storageInfoDiv.innerHTML = `💾 Spațiu ocupat: <span>${usedMB} MB</span> din <span>5 GB</span> (${percentage}%) <br> 📸 Fișiere încărcate: <span>${items.length}</span>`;
+            storageInfoDiv.innerHTML = `💾 Spațiu: <span>${usedMB} MB</span> / <span>5 GB</span> (${percentage}%) <br> 📸 Fișiere: <span>${items.length}</span>`;
         } catch (error) {
-            console.error("Eroare la calcul:", error);
             storageInfoDiv.innerHTML = "Memorie disponibilă: 5 GB";
         }
     }
@@ -180,45 +200,51 @@
             galleryDiv.innerHTML = "";
             for (const itemRef of res.items) {
                 const url = await getDownloadURL(itemRef);
+                const meta = await getMetadata(itemRef); // Tragem informațiile ascunse (nume + dispozitiv)
+                
+                const uploader = meta.customMetadata?.uploaderName || "Anonim";
+                const device = meta.customMetadata?.deviceType || "Necunoscut";
+
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'gallery-item';
                 
+                const mediaContainer = document.createElement('div');
+                mediaContainer.className = 'media-container';
+
                 const isVideo = itemRef.name.toLowerCase().match(/\.(mp4|mov|webm)$/);
                 if (isVideo) {
-                    itemDiv.innerHTML = `<video src="${url}" controls></video>`;
+                    mediaContainer.innerHTML = `<video src="${url}" controls></video>`;
                 } else {
-                    itemDiv.innerHTML = `<img src="${url}" loading="lazy">`;
+                    mediaContainer.innerHTML = `<img src="${url}" loading="lazy">`;
                 }
 
-                // Logica avansată pentru forțarea descărcării (fără a deschide altă pagină)
+                // Zona cu text care arată cine a încărcat
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'uploader-info';
+                infoDiv.innerText = `👤 ${uploader} (${device})`;
+
                 const dBtn = document.createElement('button');
                 dBtn.className = "download-btn";
                 dBtn.innerText = "Descarcă";
                 
                 dBtn.onclick = async (e) => {
-                    e.preventDefault(); // Oprește orice acțiune default
-                    const accept = confirm("Vrei să descarci această amintire?");
-                    if (accept) {
+                    e.preventDefault();
+                    if (confirm("Vrei să descarci această amintire?")) {
                         dBtn.innerText = "⏳...";
                         dBtn.disabled = true;
                         try {
-                            // Fetch aduce fișierul fizic, ignorând browserul
                             const response = await fetch(url);
                             const blob = await response.blob();
                             const blobUrl = window.URL.createObjectURL(blob);
-                            
                             const a = document.createElement('a');
                             a.style.display = 'none';
                             a.href = blobUrl;
-                            a.download = itemRef.name; // Forțează numele și descărcarea
+                            a.download = itemRef.name;
                             document.body.appendChild(a);
                             a.click();
-                            
-                            // Curățare memorie
                             window.URL.revokeObjectURL(blobUrl);
                             document.body.removeChild(a);
                         } catch (err) {
-                            // Dacă telefonul blochează metoda fetch, folosim link-ul normal ca rezervă
                             const a = document.createElement('a');
                             a.style.display = 'none';
                             a.href = url;
@@ -227,17 +253,17 @@
                             a.click();
                             document.body.removeChild(a);
                         }
-                        // Refacem butonul
                         dBtn.innerText = "Descarcă";
                         dBtn.disabled = false;
                     }
                 };
 
+                itemDiv.appendChild(mediaContainer);
+                itemDiv.appendChild(infoDiv);
                 itemDiv.appendChild(dBtn);
                 galleryDiv.appendChild(itemDiv);
             }
         } catch (e) { 
-            console.error(e); 
             galleryDiv.innerHTML = "<p class='empty-gallery'>Eroare la afișare.</p>";
         }
     }
@@ -245,6 +271,7 @@
     loadGallery();
 
     const fileInput = document.getElementById('fileInput');
+    const uploaderNameInput = document.getElementById('uploaderName');
     const uploadBtn = document.getElementById('uploadBtn');
     const progressBar = document.getElementById('progressBar');
     const statusDiv = document.getElementById('status');
@@ -253,6 +280,9 @@
         const files = fileInput.files;
         if (files.length === 0) return alert("Selectează cel puțin un fișier!");
 
+        const uploaderName = uploaderNameInput.value.trim() !== "" ? uploaderNameInput.value.trim() : "Anonim";
+        const deviceType = getDeviceType();
+
         uploadBtn.disabled = true;
         progressBar.style.display = 'block';
         statusDiv.innerText = "Se încarcă...";
@@ -260,7 +290,16 @@
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
             const storageRef = ref(storage, `botez_media/${Date.now()}_${file.name}`);
-            const uploadTask = uploadBytesResumable(storageRef, file);
+            
+            // Atașăm numele și dispozitivul de poză, invizibil
+            const metadata = {
+                customMetadata: {
+                    uploaderName: uploaderName,
+                    deviceType: deviceType
+                }
+            };
+
+            const uploadTask = uploadBytesResumable(storageRef, file, metadata);
 
             await new Promise((resolve) => {
                 uploadTask.on('state_changed', 
@@ -275,6 +314,7 @@
         progressBar.style.display = 'none';
         uploadBtn.disabled = false;
         fileInput.value = "";
+        uploaderNameInput.value = ""; // Golim căsuța
         
         storageInfoDiv.innerHTML = "⏳ Se recalculează memoria...";
         loadGallery();
