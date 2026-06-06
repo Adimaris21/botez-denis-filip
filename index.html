@@ -89,9 +89,10 @@
         .gallery-item .media-container { aspect-ratio: 1 / 1; width: 100%; }
         .gallery-item img, .gallery-item video { width: 100%; height: 100%; object-fit: cover; display: block; }
         
+        /* Boxa pentru admin (ascunsă implicit) */
         .uploader-info {
-            font-size: 11px; color: #64748b; background: white; padding: 8px 5px;
-            border-top: 1px solid #e2e8f0; text-align: center; font-weight: 600;
+            font-size: 11px; color: #b91c1c; background: #fee2e2; padding: 8px 5px;
+            border-top: 1px solid #fca5a5; text-align: center; font-weight: 800;
         }
 
         .download-btn { 
@@ -125,7 +126,7 @@
     </div>
     
     <div class="upload-section">
-        <p style="margin-top: 0; font-weight: 600;">Cine încarcă pozele?</p>
+        <p style="margin-top: 0; font-weight: 600;">Cum te numești?</p>
         <input type="text" id="uploaderName" placeholder="Numele tău (opțional)">
         <br>
         <input type="file" id="fileInput" multiple accept="image/*,video/*">
@@ -160,7 +161,9 @@
     const galleryDiv = document.getElementById('gallery');
     const storageInfoDiv = document.getElementById('storageInfo');
 
-    // Funcție pentru a detecta dispozitivul
+    const urlParams = new URLSearchParams(window.location.search);
+    const isAdmin = urlParams.get('admin') === 'adrian';
+
     function getDeviceType() {
         const ua = navigator.userAgent;
         if (/android/i.test(ua)) return "Android";
@@ -200,10 +203,12 @@
             galleryDiv.innerHTML = "";
             for (const itemRef of res.items) {
                 const url = await getDownloadURL(itemRef);
-                const meta = await getMetadata(itemRef); // Tragem informațiile ascunse (nume + dispozitiv)
+                const meta = await getMetadata(itemRef);
                 
                 const uploader = meta.customMetadata?.uploaderName || "Anonim";
                 const device = meta.customMetadata?.deviceType || "Necunoscut";
+                // Extragem numele original salvat la încărcare
+                const originalFileName = meta.customMetadata?.originalName || itemRef.name.substring(itemRef.name.indexOf('_') + 1);
 
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'gallery-item';
@@ -218,13 +223,18 @@
                     mediaContainer.innerHTML = `<img src="${url}" loading="lazy">`;
                 }
 
-                // Zona cu text care arată cine a încărcat
-                const infoDiv = document.createElement('div');
-                infoDiv.className = 'uploader-info';
-                infoDiv.innerText = `👤 ${uploader} (${device})`;
+                itemDiv.appendChild(mediaContainer);
+
+                if (isAdmin) {
+                    const infoDiv = document.createElement('div');
+                    infoDiv.className = 'uploader-info';
+                    infoDiv.innerText = `🔍 ${uploader} (${device})`;
+                    itemDiv.appendChild(infoDiv);
+                }
 
                 const dBtn = document.createElement('button');
                 dBtn.className = "download-btn";
+                if(isAdmin) dBtn.style.bottom = "45px"; 
                 dBtn.innerText = "Descarcă";
                 
                 dBtn.onclick = async (e) => {
@@ -239,7 +249,7 @@
                             const a = document.createElement('a');
                             a.style.display = 'none';
                             a.href = blobUrl;
-                            a.download = itemRef.name;
+                            a.download = originalFileName; // Forțează descărcarea cu numele original!
                             document.body.appendChild(a);
                             a.click();
                             window.URL.revokeObjectURL(blobUrl);
@@ -248,7 +258,7 @@
                             const a = document.createElement('a');
                             a.style.display = 'none';
                             a.href = url;
-                            a.download = itemRef.name;
+                            a.download = originalFileName;
                             document.body.appendChild(a);
                             a.click();
                             document.body.removeChild(a);
@@ -258,8 +268,6 @@
                     }
                 };
 
-                itemDiv.appendChild(mediaContainer);
-                itemDiv.appendChild(infoDiv);
                 itemDiv.appendChild(dBtn);
                 galleryDiv.appendChild(itemDiv);
             }
@@ -291,11 +299,12 @@
             const file = files[i];
             const storageRef = ref(storage, `botez_media/${Date.now()}_${file.name}`);
             
-            // Atașăm numele și dispozitivul de poză, invizibil
+            // Aici adăugăm numele ORIGINAL în interiorul pozei
             const metadata = {
                 customMetadata: {
                     uploaderName: uploaderName,
-                    deviceType: deviceType
+                    deviceType: deviceType,
+                    originalName: file.name
                 }
             };
 
@@ -314,9 +323,9 @@
         progressBar.style.display = 'none';
         uploadBtn.disabled = false;
         fileInput.value = "";
-        uploaderNameInput.value = ""; // Golim căsuța
+        uploaderNameInput.value = ""; 
         
-        storageInfoDiv.innerHTML = "⏳ Se recalculează memoria...";
+        storageInfoDiv.innerHTML = "⏳ Se recalculează...";
         loadGallery();
     });
 </script>
